@@ -55,6 +55,7 @@ class BaseQuamQD(QuamRoot):
         ports (Union[FEMPortsContainer, OPXPlusPortsContainer]): The ports container.
         _data_handler (ClassVar[DataHandler]): The data handler.
         qmm (ClassVar[Optional[QuantumMachinesManager]]): The Quantum Machines Manager.
+        state_path (ClassVar[Optional[Union[str, Path]]]): Default location for load/save.
 
     Methods:
         get_serialiser: Get the serialiser for the QuamRoot class, which is the JSONSerialiser.
@@ -97,14 +98,23 @@ class BaseQuamQD(QuamRoot):
     ports: Union[FEMPortsContainer, OPXPlusPortsContainer] = None
 
     qmm: ClassVar[Optional[QuantumMachinesManager]] = None
+    # Default save/load location. None keeps quam's own resolution (env var, quam config, cwd).
+    state_path: ClassVar[Optional[Union[str, Path]]] = None
 
     @classmethod
     def get_serialiser(cls) -> JSONSerialiser:
         """Get the serialiser for the QuamRoot class, which is the JSONSerialiser.
 
         This method can be overridden by subclasses to provide a custom serialiser.
+
+        If the class attribute ``state_path`` is set, it is used as the serialiser's state path
+        and takes precedence over the ``QUAM_STATE_PATH`` environment variable. It is read each
+        time a serialiser is created, so set it before calling ``load()``.
         """
-        return JSONSerialiser(content_mapping={"wiring": "wiring.json", "network": "wiring.json"})
+        return JSONSerialiser(
+            content_mapping={"wiring": "wiring.json", "network": "wiring.json"},
+            state_path=cls.state_path,
+        )
 
     def get_voltage_sequence(self, gate_set_id: str) -> VoltageSequence:
         if gate_set_id not in self.voltage_sequences:

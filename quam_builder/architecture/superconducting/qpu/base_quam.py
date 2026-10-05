@@ -2,6 +2,7 @@ from dataclasses import field
 from typing import List, Dict, ClassVar, Optional, Union
 import importlib
 import logging
+from pathlib import Path
 
 from qm import QuantumMachinesManager, QuantumMachine
 from qm.octave import QmOctaveConfig
@@ -40,6 +41,7 @@ class BaseQuam(QuamRoot):
         ports (Union[FEMPortsContainer, OPXPlusPortsContainer]): The ports container.
         # _data_handler (ClassVar[DataHandler]): The data handler. # Unused
         qmm (Optional[QuantumMachinesManager]): The Quantum Machines Manager.
+        state_path (Optional[Union[str, Path]]): Class-level default location for load/save.
         extras (dict): Additional attributes for the QUAM.
     Methods:
         get_serialiser: Get the serialiser for the QuamRoot class.
@@ -70,6 +72,8 @@ class BaseQuam(QuamRoot):
     ports: Optional[Union[FEMPortsContainer, OPXPlusPortsContainer]] = None
 
     qmm: ClassVar[Optional[QuantumMachinesManager]] = None
+    # Default save/load location. None keeps quam's own resolution (env var, quam config, cwd).
+    state_path: ClassVar[Optional[Union[str, Path]]] = None
 
     extras: dict = field(default_factory=dict)
 
@@ -78,8 +82,15 @@ class BaseQuam(QuamRoot):
         """Get the serialiser for the QuamRoot class, which is the JSONSerialiser.
 
         This method can be overridden by subclasses to provide a custom serialiser.
+
+        If the class attribute ``state_path`` is set, it is used as the serialiser's state path
+        and takes precedence over the ``QUAM_STATE_PATH`` environment variable. It is read each
+        time a serialiser is created, so set it before calling ``load()``.
         """
-        return JSONSerialiser(content_mapping={"wiring": "wiring.json", "network": "wiring.json"})
+        return JSONSerialiser(
+            content_mapping={"wiring": "wiring.json", "network": "wiring.json"},
+            state_path=cls.state_path,
+        )
 
     def get_octave_config(self) -> Optional[QmOctaveConfig]:
         """Return the Octave configuration."""
